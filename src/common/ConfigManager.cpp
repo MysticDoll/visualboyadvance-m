@@ -1380,3 +1380,5 @@ int ReadOpts(int argc, char ** argv)
 	return op;
 }
 
+#ifdef _WIN32
+#endif

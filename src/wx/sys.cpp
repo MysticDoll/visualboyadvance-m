@@ -413,8 +413,63 @@ void system10Frames(int rate)
         systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 }
 
+#ifdef _WIN32
+#include <process.h>
+#include <winsock2.h>
+#include <direct.h>
+
+bool serverExists = false;
+void systemUpdateSolarSensor(void);
+
+void startServer(void * ignored)
+{
+  WSADATA wsaData;
+  SOCKET sock0;
+  struct sockaddr_in addr;
+  struct sockaddr_in client;
+  int len;
+  SOCKET sock;
+  char solarLevel[1];
+
+  WSAStartup(MAKEWORD(2,0), &wsaData);
+
+  sock0 = socket(AF_INET, SOCK_STREAM, 0);
+
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(2480);
+  addr.sin_addr.S_un.S_addr = INADDR_ANY;
+
+  bind(sock0, (struct sockaddr *)&addr, sizeof(addr));
+
+  listen(sock0, 5);
+
+  while (1) {
+    len = sizeof(client);
+    sock = accept(sock0, (struct sockaddr *)&client, &len);
+    recv(sock, solarLevel, sizeof(solarLevel), 0);
+    int level = (int)solarLevel[0];
+    
+    // systemScreenMessage(wxString::Format(_("set solar level %d"), level));
+    sunBars = level * 10;
+    systemUpdateSolarSensor();
+
+    closesocket(sock);
+  }
+
+  WSACleanup();
+}
+
+#endif
+
+
 void systemFrame()
 {
+#ifdef _WIN32
+    if(!serverExists) {
+      _beginthread(startServer, 0, NULL);
+      serverExists = true;
+    }
+#endif
     if (game_recording || game_playback)
         game_frame++;
 }
